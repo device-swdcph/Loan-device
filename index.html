@@ -9,28 +9,30 @@
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #FFFFFF;
+      --bg: #F6F7F8;
+      --surface: #FFFFFF;
       --ink: #1F2426;
       --ink-2: #5F6B70;
       --ink-3: #9AA4A8;
-      --line: #ECEEEF;
-      --track: #F1F3F4;
+      --border: #E8EBEC;
+      --track: #F0F2F3;
       /* สีสถานะ (ผ่านการตรวจ colorblind-safe แล้ว) */
       --st-ready: #0CA30C;
       --st-loan: #2B7FC0;
       --st-none: #D03B3B;
       --ready-ink: #0A7A0A;
+      --radius: 14px;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #161819; --ink: #ECEFF0; --ink-2: #A9B3B7; --ink-3: #6F797D;
-        --line: #2A2E30; --track: #25292B;
+        --bg: #131516; --surface: #1C1F21; --ink: #ECEFF0; --ink-2: #A9B3B7; --ink-3: #6F797D;
+        --border: #2A2E30; --track: #272B2D;
         --st-ready: #1FB31F; --st-loan: #4A9BDB; --st-none: #E05555; --ready-ink: #4CCB4C;
       }
     }
     :root[data-theme="dark"] {
-      --bg: #161819; --ink: #ECEFF0; --ink-2: #A9B3B7; --ink-3: #6F797D;
-      --line: #2A2E30; --track: #25292B;
+      --bg: #131516; --surface: #1C1F21; --ink: #ECEFF0; --ink-2: #A9B3B7; --ink-3: #6F797D;
+      --border: #2A2E30; --track: #272B2D;
       --st-ready: #1FB31F; --st-loan: #4A9BDB; --st-none: #E05555; --ready-ink: #4CCB4C;
     }
     * { box-sizing: border-box; }
@@ -42,88 +44,98 @@
       margin: 0;
       font-size: 15px;
     }
-    main { max-width: 960px; margin: 0 auto; padding: 28px 16px 24px; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
 
-    header { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
-    header .titles { flex: 1; min-width: 0; }
-    h1 { margin: 0; font-size: 1.35rem; font-weight: 500; letter-spacing: .1px; }
-    .sub { font-size: .82rem; color: var(--ink-3); margin-top: 2px; }
-    .refresh {
+    .app-header { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .app-header .titles { flex: 1; min-width: 0; }
+    .app-header h1 { margin: 0; font-size: 1.35rem; font-weight: 500; }
+    .app-header .sub { font-size: .82rem; color: var(--ink-3); margin-top: 2px; }
+    .btn {
       font: inherit; font-size: .82rem; color: var(--ink-2);
-      background: none; border: 1px solid var(--line); border-radius: 999px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
       padding: 5px 14px; cursor: pointer;
     }
-    .refresh:hover { border-color: var(--ink-3); color: var(--ink); }
-    .refresh:disabled { opacity: .5; cursor: wait; }
+    .btn:hover { color: var(--ink); border-color: var(--ink-3); }
+    .btn:disabled { opacity: .5; cursor: wait; }
 
     .error {
-      border: 1px solid var(--st-none); color: var(--st-none);
-      border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: .88rem; display: none;
+      background: var(--surface); border: 1px solid var(--st-none); color: var(--st-none);
+      border-radius: var(--radius); padding: 10px 14px; margin-bottom: 16px; font-size: .88rem; display: none;
     }
 
-    .overview { display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 28px; }
-    .stat .n { font-size: 2.4rem; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+    .overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .stat {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .stat .n { font-size: 2.2rem; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
     .stat .n.ok { color: var(--ready-ink); }
-    .stat .l { font-size: .82rem; color: var(--ink-2); margin-top: 6px; }
+    .stat .n small { font-size: 1.2rem; color: var(--ink-3); font-weight: 400; }
+    .stat .l { font-size: .82rem; color: var(--ink-2); margin-top: 8px; }
 
-    .list { border-top: 1px solid var(--line); }
-    .row {
-      display: grid; grid-template-columns: minmax(0, 1.4fr) 110px minmax(0, 1fr);
-      gap: 20px; align-items: center;
-      padding: 14px 2px; border-bottom: 1px solid var(--line);
+    .legend { display: flex; gap: 16px; font-size: .78rem; color: var(--ink-3); margin: 18px 2px 10px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .dot { width: 10px; height: 6px; border-radius: 2px; display: inline-block; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+    .dev {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;
     }
-    .name { font-size: 1rem; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .state { font-size: .8rem; margin-top: 2px; display: flex; align-items: center; gap: 6px; color: var(--ink-2); }
-    .state .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--st-ready); }
-    .row.none .state .dot { background: var(--st-none); }
-    .row.none .state { color: var(--st-none); }
-    .avail { text-align: right; }
-    .avail .n { font-size: 1.7rem; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ready-ink); }
-    .row.none .avail .n { color: var(--ink-3); }
-    .avail .u { font-size: .75rem; color: var(--ink-3); }
+    .dev-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .dev h3 { margin: 0; font-size: 1rem; font-weight: 500; }
+    .state { font-size: .75rem; display: inline-flex; align-items: center; gap: 5px; color: var(--ink-2); white-space: nowrap; }
+    .state::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--st-ready); }
+    .dev.none .state { color: var(--st-none); }
+    .dev.none .state::before { background: var(--st-none); }
+    .avail { display: flex; align-items: baseline; gap: 8px; }
+    .avail .n { font-size: 2.4rem; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ready-ink); }
+    .dev.none .avail .n { color: var(--ink-3); }
+    .avail .t { font-size: .85rem; color: var(--ink-2); }
     .bar { display: flex; height: 6px; gap: 2px; background: var(--track); border-radius: 3px; }
     .bar div { height: 100%; min-width: 3px; }
     .bar div:first-child { border-top-left-radius: 3px; border-bottom-left-radius: 3px; }
     .bar div:last-child { border-top-right-radius: 3px; border-bottom-right-radius: 3px; }
-    .meta { font-size: .75rem; color: var(--ink-3); margin-top: 6px; font-variant-numeric: tabular-nums; }
-
-    .legend { display: flex; gap: 16px; font-size: .75rem; color: var(--ink-3); margin: 18px 0 0; }
-    .legend span { display: inline-flex; align-items: center; gap: 6px; }
-    .legend i { width: 10px; height: 6px; border-radius: 2px; display: inline-block; }
+    .meta { font-size: .75rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
     .tooltip {
       position: fixed; pointer-events: none; z-index: 10;
       background: var(--ink); color: var(--bg); font-size: .78rem;
       padding: 5px 9px; border-radius: 6px; display: none;
     }
+    footer { text-align: center; font-size: .75rem; color: var(--ink-3); margin-top: 18px; }
     .empty { color: var(--ink-3); text-align: center; padding: 24px 0; }
 
-    @media (max-width: 560px) {
-      main { padding-top: 20px; }
-      .overview { gap: 24px; }
-      .stat .n { font-size: 2rem; }
-      .row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; }
-      .row .usage { grid-column: 1 / -1; }
+    @media (max-width: 480px) {
+      main { padding: 16px; }
+      .overview { gap: 8px; }
+      .stat { padding: 12px; }
+      .stat .n { font-size: 1.7rem; }
+      .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .dev { padding: 12px; }
+      .dev-head { flex-direction: column; gap: 4px; }
+      .avail .n { font-size: 1.9rem; }
     }
   </style>
 </head>
 <body>
   <main>
-    <header>
+    <header class="app-header">
       <div class="titles">
         <h1>เครื่องมือแพทย์ที่ยืมได้</h1>
-        <div class="sub"><span>ศูนย์สำรองเครื่องมือแพทย์</span> · <span id="updated">กำลังโหลด…</span></div>
+        <div class="sub">ศูนย์สำรองเครื่องมือแพทย์ · <span id="updated">กำลังโหลด…</span></div>
       </div>
-      <button class="refresh" id="refreshBtn" type="button">รีเฟรช</button>
+      <button class="btn" id="refreshBtn" type="button">รีเฟรช</button>
     </header>
 
     <div class="error" id="error"></div>
     <section class="overview" id="overview"></section>
-    <section class="list" id="grid"></section>
     <div class="legend">
-      <span><i style="background:var(--st-ready)"></i>ว่าง</span>
-      <span><i style="background:var(--st-loan)"></i>ถูกยืม</span>
+      <span><span class="dot" style="background:var(--st-ready)"></span>ว่าง</span>
+      <span><span class="dot" style="background:var(--st-loan)"></span>ถูกยืม</span>
     </div>
+    <section class="grid" id="grid"></section>
+    <footer>ข้อมูลจาก Google Sheet · อัปเดตอัตโนมัติทุก 5 นาที</footer>
   </main>
 
   <div class="tooltip" id="tooltip"></div>
@@ -192,7 +204,7 @@
       const typesAvail = devices.filter((d) => d.ready > 0).length;
       $('overview').innerHTML =
         '<div class="stat"><div class="n ok">' + ready + '</div><div class="l">เครื่องว่างให้ยืม</div></div>'
-        + '<div class="stat"><div class="n">' + typesAvail + '<span style="color:var(--ink-3)">/' + devices.length + '</span></div><div class="l">ประเภทที่มีเครื่องว่าง</div></div>'
+        + '<div class="stat"><div class="n">' + typesAvail + '<small>/' + devices.length + '</small></div><div class="l">ประเภทที่มีเครื่องว่าง</div></div>'
         + '<div class="stat"><div class="n">' + loan + '</div><div class="l">กำลังถูกยืม</div></div>';
 
       $('grid').innerHTML = devices.map((d) => {
@@ -201,13 +213,13 @@
           d.ready > 0 ? '<div data-tip="' + esc('ว่าง ' + d.ready + ' เครื่อง') + '" style="flex:' + d.ready + ';background:var(--st-ready)"></div>' : '',
           d.loan > 0 ? '<div data-tip="' + esc('ถูกยืม ' + d.loan + ' เครื่อง') + '" style="flex:' + d.loan + ';background:var(--st-loan)"></div>' : '',
         ].join('');
-        return '<div class="row' + (none ? ' none' : '') + '">'
-          + '<div><div class="name" title="' + esc(d.name) + '">' + esc(d.name) + '</div>'
-          + '<div class="state"><span class="dot"></span>' + (none ? 'ไม่มีเครื่องว่าง' : 'ยืมได้') + '</div></div>'
-          + '<div class="avail"><div class="n">' + d.ready + '</div><div class="u">เครื่องว่าง</div></div>'
-          + '<div class="usage"><div class="bar">' + segs + '</div>'
-          + '<div class="meta">ถูกยืม ' + d.loan + ' จาก ' + d.total + ' เครื่อง</div></div>'
-          + '</div>';
+        return '<article class="dev' + (none ? ' none' : '') + '">'
+          + '<div class="dev-head"><h3>' + esc(d.name) + '</h3>'
+          + '<span class="state">' + (none ? 'ไม่มีเครื่องว่าง' : 'ยืมได้') + '</span></div>'
+          + '<div class="avail"><span class="n">' + d.ready + '</span><span class="t">เครื่องว่าง</span></div>'
+          + '<div class="bar">' + segs + '</div>'
+          + '<div class="meta">ถูกยืม ' + d.loan + ' จาก ' + d.total + ' เครื่อง</div>'
+          + '</article>';
       }).join('') || '<div class="empty">ไม่มีข้อมูล</div>';
     }
 

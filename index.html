@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ศูนย์สำรองเครื่องมือแพทย์</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #FAF6EC;
+      --surface: #FFFFFF;
+      --surface-2: #F1E9D8;
+      --head-1: #1D3E4E;
+      --head-2: #2C5F79;
+      --accent: #D97B29;
+      --ink: #26302E;
+      --ink-2: #4A5558;
+      --ink-muted: #6B7A80;
+      --border: #E3DCC9;
+      --grid: #EDE7D8;
+      /* สีสถานะ (ผ่านการตรวจ colorblind-safe แล้ว) */
+      --st-ready: #0CA30C;
+      --st-loan: #2B7FC0;
+      --st-down: #D03B3B;
+      --st-other: #9AA5A8;
+      --warn-bg: #FBEBD9; --warn-ink: #7a3b0c; --warn-border: #E8B98C;
+      --radius: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #161a1b; --surface: #1f2426; --surface-2: #283033;
+        --head-1: #12262f; --head-2: #1d4254;
+        --ink: #E9EDEE; --ink-2: #C3CBCD; --ink-muted: #8E9A9E;
+        --border: #333C3F; --grid: #2A3134;
+        --st-ready: #1FB31F; --st-loan: #4A9BDB; --st-down: #E05555; --st-other: #6F7A7D;
+        --warn-bg: #3a2a1a; --warn-ink: #F3C79A; --warn-border: #6b4a2a;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #161a1b; --surface: #1f2426; --surface-2: #283033;
+      --head-1: #12262f; --head-2: #1d4254;
+      --ink: #E9EDEE; --ink-2: #C3CBCD; --ink-muted: #8E9A9E;
+      --border: #333C3F; --grid: #2A3134;
+      --st-ready: #1FB31F; --st-loan: #4A9BDB; --st-down: #E05555; --st-other: #6F7A7D;
+        --warn-bg: #3a2a1a; --warn-ink: #F3C79A; --warn-border: #6b4a2a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Sarabun', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      margin: 0;
+      padding: 0 0 24px;
+      font-size: 15px;
+    }
+    .app-header {
+      background: linear-gradient(135deg, var(--head-1), var(--head-2));
+      border-bottom: 3px solid var(--accent);
+      color: #fff;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .app-header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+    .app-header .sub { font-size: .85rem; opacity: .85; }
+    .app-header .spacer { flex: 1; }
+    .btn {
+      font: inherit; font-size: .85rem;
+      border: 1px solid rgba(255,255,255,.4);
+      background: rgba(255,255,255,.12);
+      color: #fff; border-radius: 8px;
+      padding: 6px 12px; cursor: pointer;
+    }
+    .btn:hover { background: rgba(255,255,255,.22); }
+    .btn:disabled { opacity: .6; cursor: wait; }
+    main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .error {
+      background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-border);
+      border-radius: var(--radius); padding: 12px 14px; margin-bottom: 16px;
+      display: none;
+    }
+    .error code { background: rgba(0,0,0,.06); padding: 1px 4px; border-radius: 4px; }
+
+    /* KPI */
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+    .kpi {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px 14px; cursor: pointer; text-align: left; font: inherit; color: inherit;
+    }
+    .kpi[aria-pressed="true"] { outline: 2px solid var(--head-2); outline-offset: -2px; }
+    .kpi .label { font-size: .85rem; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+    .kpi .value { font-size: 2rem; font-weight: 700; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .kpi .pct { font-size: .8rem; color: var(--ink-muted); }
+    .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+
+    .grid-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-bottom: 16px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px 16px; min-width: 0;
+    }
+    .card h2 { font-size: 1rem; margin: 0 0 4px; }
+    .card .hint { font-size: .8rem; color: var(--ink-muted); margin: 0 0 12px; }
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .82rem; color: var(--ink-2); margin-bottom: 10px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+    /* stacked bars by type */
+    .type-row {
+      display: grid; grid-template-columns: 150px 1fr 44px; gap: 10px; align-items: center;
+      padding: 5px 4px; border-radius: 8px; cursor: pointer;
+    }
+    .type-row:hover, .type-row.active { background: var(--surface-2); }
+    .type-name { font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .type-total { text-align: right; font-size: .85rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .stack { display: flex; height: 20px; gap: 2px; }
+    .seg {
+      height: 100%; min-width: 3px; color: #fff; font-size: .72rem; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .seg:first-child { border-radius: 4px 0 0 4px; }
+    .seg:last-child { border-radius: 0 4px 4px 0; }
+    .seg:only-child { border-radius: 4px; }
+
+    /* dept bars */
+    .dept-row { display: grid; grid-template-columns: 130px 1fr 30px; gap: 10px; align-items: center; padding: 4px 0; font-size: .88rem; }
+    .dept-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dept-track { height: 14px; }
+    .dept-bar { height: 100%; background: var(--st-loan); border-radius: 0 4px 4px 0; min-width: 3px; }
+    .dept-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+
+    /* table */
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .filters select, .filters input {
+      font: inherit; font-size: .88rem; padding: 6px 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+    }
+    .filters input { flex: 1; min-width: 160px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    th, td { padding: 7px 8px; border-bottom: 1px solid var(--grid); text-align: left; vertical-align: top; }
+    th { color: var(--ink-2); font-weight: 600; background: var(--surface-2); position: sticky; top: 0; white-space: nowrap; }
+    td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+      padding: 2px 8px; border-radius: 999px; font-size: .8rem; font-weight: 600;
+      border: 1px solid currentColor;
+    }
+    .badge.ready { color: var(--st-ready); }
+    .badge.loan { color: var(--st-loan); }
+    .badge.down { color: var(--st-down); }
+    .badge.other { color: var(--st-other); }
+    .long { color: var(--st-down); font-weight: 600; }
+    .note { color: var(--ink-muted); max-width: 260px; }
+    .count-line { font-size: .8rem; color: var(--ink-muted); margin-top: 8px; }
+    .empty { color: var(--ink-muted); padding: 16px 0; text-align: center; }
+
+    .tooltip {
+      position: fixed; pointer-events: none; z-index: 10;
+      background: var(--ink); color: var(--bg); font-size: .8rem;
+      padding: 6px 9px; border-radius: 6px; display: none; max-width: 240px;
+    }
+    footer { text-align: center; font-size: .78rem; color: var(--ink-muted); margin-top: 8px; }
+
+    @media (max-width: 820px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 480px) {
+      main { padding: 12px 16px; }
+      .type-row { grid-template-columns: 100px 1fr 36px; }
+      .dept-row { grid-template-columns: 100px 1fr 28px; }
+      .kpi .value { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>ศูนย์สำรองเครื่องมือแพทย์</h1>
+      <div class="sub" id="updated">กำลังโหลดข้อมูล…</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="refreshBtn" type="button">↻ รีเฟรช</button>
+  </header>
+
+  <main>
+    <div class="error" id="error"></div>
+
+    <section class="kpis" id="kpis"></section>
+
+    <div class="grid-2">
+      <section class="card">
+        <h2>สถานะแยกตามประเภทเครื่อง</h2>
+        <p class="hint">คลิกแถวเพื่อกรองตารางด้านล่าง</p>
+        <div class="legend" id="legend"></div>
+        <div id="byType"></div>
+      </section>
+      <section class="card">
+        <h2>หน่วยงานที่ยืมอยู่</h2>
+        <p class="hint">จำนวนเครื่องที่สถานะ "ถูกยืม" แยกตามหน่วยงาน</p>
+        <div id="byDept"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>รายการเครื่องมือทั้งหมด</h2>
+      <div class="filters">
+        <select id="fType" aria-label="ประเภท"><option value="">ทุกประเภท</option></select>
+        <select id="fStatus" aria-label="สถานะ">
+          <option value="">ทุกสถานะ</option>
+          <option value="ready">พร้อมใช้</option>
+          <option value="loan">ถูกยืม</option>
+          <option value="down">ไม่พร้อมใช้งาน</option>
+          <option value="other">อื่น ๆ</option>
+        </select>
+        <input id="fSearch" type="search" placeholder="ค้นหา เลขครุภัณฑ์ / ยี่ห้อ / หน่วยงาน / หมายเหตุ" />
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ประเภท</th>
+              <th>เลขครุภัณฑ์</th>
+              <th>ยี่ห้อ</th>
+              <th>สถานะ</th>
+              <th>หน่วยงานที่ยืม</th>
+              <th>วันที่ยืม</th>
+              <th>ยืมมาแล้ว</th>
+              <th>หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="count-line" id="countLine"></div>
+    </section>
+
+    <footer>ข้อมูลดึงจาก Google Sheet อัตโนมัติทุก 5 นาที</footer>
+  </main>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    /* ================== ตั้งค่า ================== */
+    const SHEET_ID = '1-qVQwnTXYy0pRpAxG85BRLzB4HfoBQBfGfmTV04M4hs';
+
+    // ชื่อแท็บในชีต -> ชื่อประเภทที่แสดงบน Dashboard
+    // ถ้าเพิ่มแท็บเครื่องชนิดใหม่ ให้เพิ่มบรรทัดที่นี่
+    const SHEETS = [
+      { sheet: 'ชีต2', label: 'HFNC' },
+      { sheet: 'ชีต8', label: 'Infusion pump' },
+      { sheet: 'ชีต7', label: 'Ventilator' },
+      { sheet: 'ชีต4', label: 'EKG 12 Lead' },
+      { sheet: 'ชีต5', label: 'Suction mobile' },
+      { sheet: 'ชีต6', label: 'Suction pipeline' },
+      { sheet: 'ชีต3', label: 'เครื่อง BP ตั้งโต๊ะ' },
+      { sheet: 'ชีต9', label: 'Monitor NIBP' },
+    ];
+
+    // รวมชื่อหน่วยงานที่สะกดต่างกันให้เป็นชื่อเดียว
+    const DEPT_ALIAS = {
+      'กุมาร': 'กุมารเวชกรรม',
+      'กุุมาร': 'กุมารเวชกรรม',
+      'อายรกรรมชาย': 'อายุรกรรมชาย',
+    };
+
+    const REFRESH_MS = 5 * 60 * 1000;
+    const LONG_LOAN_DAYS = 30; // ยืมเกินกี่วันให้แสดงสีแดง
+    /* ============================================ */
+
+    const STATUS = {
+      ready: { label: 'พร้อมใช้',       icon: '✓', color: 'var(--st-ready)' },
+      loan:  { label: 'ถูกยืม',         icon: '⇄', color: 'var(--st-loan)' },
+      down:  { label: 'ไม่พร้อมใช้งาน', icon: '✕', color: 'var(--st-down)' },
+      other: { label: 'อื่น ๆ',          icon: '?', color: 'var(--st-other)' },
+    };
+    const STATUS_ORDER = ['ready', 'loan', 'down', 'other'];
+
+    const $ = (id) => document.getElementById(id);
+    let allItems = [];
+    const filter = { type: '', status: '', q: '' };
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // ---------- ดึงข้อมูลผ่าน Google Visualization API (JSONP) ----------
+    let cbSeq = 0;
+    function fetchSheet(sheetName) {
+      return new Promise((resolve, reject) => {
+        const cb = '__gviz_cb_' + (++cbSeq);
+        const script = document.createElement('script');
+        const timer = setTimeout(() => { cleanup(); reject(new Error('หมดเวลาโหลด')); }, 20000);
+        function cleanup() { clearTimeout(timer); delete window[cb]; script.remove(); }
+        window[cb] = (resp) => {
+          cleanup();
+          if (resp.status === 'error') {
+            const msg = (resp.errors || []).map((e) => e.detailed_message || e.message).join(', ');
+            reject(new Error(msg));
+          } else resolve(resp.table);
+        };
+        script.onerror = () => { cleanup(); reject(new Error('โหลดไม่สำเร็จ')); };
+        script.src = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq'
+          + '?sheet=' + encodeURIComponent(sheetName)
+          + '&headers=1&tqx=responseHandler:' + cb
+          + '&_=' + Date.now();
+        document.head.appendChild(script);
+      });
+    }
+
+    function cellText(c) {
+      if (!c || c.v === null || c.v === undefined) return '';
+      if (c.f !== undefined && c.f !== null) return String(c.f).trim();
+      return String(c.v).trim();
+    }
+
+    function parseDate(c) {
+      if (!c || c.v === null || c.v === undefined || c.v === '') return null;
+      let m = /^Date\((\d+),(\d+),(\d+)/.exec(String(c.v));
+      if (m) return fixYear(new Date(+m[1], +m[2], +m[3]));
+      m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(cellText(c));
+      if (m) return fixYear(new Date(+m[3], +m[2] - 1, +m[1]));
+      return null;
+    }
+    function fixYear(d) { if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear() - 543); return d; }
+    function fmtDate(d) { return d ? d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear() : ''; }
+
+    function normStatus(s) {
+      s = s.replace(/\s+/g, '');
+      if (!s) return 'other';
+      if (s.startsWith('ไม่พร้อม')) return 'down';
+      if (s.startsWith('พร้อมใช้')) return 'ready';
+      if (s.includes('ยืม')) return 'loan';
+      return 'other';
+    }
+
+    function findCol(labels, test) { return labels.findIndex(test); }
+
+    function tableToItems(table, typeLabel) {
+      const labels = table.cols.map((c) => (c.label || '').replace(/\s+/g, ' ').trim());
+      const idx = {
+        name:   findCol(labels, (l) => l.includes('ชื่อครุภัณฑ์')),
+        asset:  findCol(labels, (l) => l.includes('เลขครุภัณฑ์')),
+        brand:  findCol(labels, (l) => l.includes('ยี่ห้อ')),
+        status: findCol(labels, (l) => l === 'สถานะ'),
+        dept:   findCol(labels, (l) => l.includes('หน่วยงาน')),
+        lent:   findCol(labels, (l) => l.includes('ยืม') && l.includes('วันที่') && !l.includes('หน่วยงาน')),
+        ret:    findCol(labels, (l) => l.includes('คืน')),
+        note:   findCol(labels, (l) => l.includes('หมายเหตุ')),
+      };
+      const get = (row, k) => (idx[k] >= 0 ? cellText(row.c[idx[k]]) : '');
+      const items = [];
+      for (const row of table.rows || []) {
+        if (!row || !row.c) continue;
+        const asset = get(row, 'asset');
+        const name = get(row, 'name');
+        if (!asset && !name) continue;
+        const statusRaw = get(row, 'status');
+        let dept = get(row, 'dept');
+        dept = DEPT_ALIAS[dept] || dept;
+        items.push({
+          type: typeLabel,
+          name, asset,
+          brand: get(row, 'brand'),
+          statusRaw,
+          status: normStatus(statusRaw),
+          dept,
+          lent: idx.lent >= 0 ? parseDate(row.c[idx.lent]) : null,
+          ret: idx.ret >= 0 ? parseDate(row.c[idx.ret]) : null,
+          note: [get(row, 'note'), idx.note >= 0 && row.c[idx.note + 1] && !labels[idx.note + 1] ? cellText(row.c[idx.note + 1]) : '']
+            .filter(Boolean).join(' / '),
+        });
+      }
+      return items;
+    }
+
+    function loanDays(it) {
+      if (it.status !== 'loan' || !it.lent) return null;
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      return Math.max(0, Math.round((today - it.lent) / 86400000));
+    }
+
+    // ---------- render ----------
+    function badge(st) {
+      const s = STATUS[st];
+      return '<span class="badge ' + st + '"><span aria-hidden="true">' + s.icon + '</span>' + s.label + '</span>';
+    }
+
+    function renderKpis() {
+      const total = allItems.length;
+      const count = (st) => allItems.filter((i) => i.status === st).length;
+      const tiles = [
+        { key: '', label: 'เครื่องทั้งหมด', value: total, color: 'var(--accent)' },
+        { key: 'ready', label: STATUS.ready.icon + ' ' + STATUS.ready.label, value: count('ready'), color: STATUS.ready.color },
+        { key: 'loan', label: STATUS.loan.icon + ' ' + STATUS.loan.label, value: count('loan'), color: STATUS.loan.color },
+        { key: 'down', label: STATUS.down.icon + ' ' + STATUS.down.label, value: count('down'), color: STATUS.down.color },
+      ];
+      $('kpis').innerHTML = tiles.map((t) =>
+        '<button class="kpi" type="button" data-status="' + t.key + '" aria-pressed="' + (filter.status === t.key) + '">'
+        + '<div class="label"><span class="dot" style="background:' + t.color + '"></span>' + t.label + '</div>'
+        + '<div class="value">' + t.value + '</div>'
+        + '<div class="pct">' + (t.key && total ? Math.round(t.value / total * 100) + '% ของทั้งหมด' : 'รายการ') + '</div>'
+        + '</button>').join('');
+    }
+
+    function renderLegend() {
+      const used = STATUS_ORDER.filter((st) => st !== 'other' || allItems.some((i) => i.status === 'other'));
+      $('legend').innerHTML = used.map((st) =>
+        '<span><span class="dot" style="background:' + STATUS[st].color + '"></span>' + STATUS[st].label + '</span>').join('');
+    }
+
+    function renderByType() {
+      const rows = SHEETS.map((s) => {
+        const items = allItems.filter((i) => i.type === s.label);
+        const counts = {};
+        STATUS_ORDER.forEach((st) => (counts[st] = items.filter((i) => i.status === st).length));
+        return { label: s.label, total: items.length, counts };
+      }).filter((r) => r.total > 0);
+      const max = Math.max(1, ...rows.map((r) => r.total));
+      $('byType').innerHTML = rows.map((r) => {
+        const segs = STATUS_ORDER.filter((st) => r.counts[st] > 0).map((st) => {
+          const n = r.counts[st];
+          const tip = r.label + ' · ' + STATUS[st].label + ': ' + n + ' เครื่อง (' + Math.round(n / r.total * 100) + '%)';
+          return '<div class="seg" data-tip="' + esc(tip) + '" style="flex:' + n + ';background:' + STATUS[st].color + '">'
+            + (n / max > 0.06 ? n : '') + '</div>';
+        }).join('');
+        return '<div class="type-row' + (filter.type === r.label ? ' active' : '') + '" data-type="' + esc(r.label) + '">'
+          + '<div class="type-name" title="' + esc(r.label) + '">' + esc(r.label) + '</div>'
+          + '<div><div class="stack" style="width:' + (r.total / max * 100) + '%">' + segs + '</div></div>'
+          + '<div class="type-total">' + r.total + '</div></div>';
+      }).join('') || '<div class="empty">ไม่มีข้อมูล</div>';
+    }
+
+    function renderByDept() {
+      const map = new Map();
+      allItems.filter((i) => i.status === 'loan').forEach((i) => {
+        const d = i.dept || 'ไม่ระบุหน่วยงาน';
+        map.set(d, (map.get(d) || 0) + 1);
+      });
+      const rows = [...map.entries()].sort((a, b) => b[1] - a[1]);
+      const max = Math.max(1, ...rows.map((r) => r[1]));
+      $('byDept').innerHTML = rows.map(([d, n]) =>
+        '<div class="dept-row" data-tip="' + esc(d + ': ยืม ' + n + ' เครื่อง') + '">'
+        + '<div class="dept-name" title="' + esc(d) + '">' + esc(d) + '</div>'
+        + '<div class="dept-track"><div class="dept-bar" style="width:' + (n / max * 100) + '%"></div></div>'
+        + '<div class="dept-val">' + n + '</div></div>').join('') || '<div class="empty">ไม่มีเครื่องที่ถูกยืม</div>';
+    }
+
+    function renderTable() {
+      const q = filter.q.toLowerCase();
+      const rows = allItems.filter((i) =>
+        (!filter.type || i.type === filter.type) &&
+        (!filter.status || i.status === filter.status) &&
+        (!q || [i.type, i.name, i.asset, i.brand, i.dept, i.note, i.statusRaw].join(' ').toLowerCase().includes(q)));
+      $('tbody').innerHTML = rows.map((i) => {
+        const days = loanDays(i);
+        return '<tr>'
+          + '<td>' + esc(i.type) + '</td>'
+          + '<td class="num">' + esc(i.asset) + '</td>'
+          + '<td>' + esc(i.brand) + '</td>'
+          + '<td>' + badge(i.status) + '</td>'
+          + '<td>' + (i.status === 'loan' || i.dept ? esc(i.dept) : '') + '</td>'
+          + '<td class="num">' + (i.status === 'loan' ? fmtDate(i.lent) : '') + '</td>'
+          + '<td class="num' + (days !== null && days > LONG_LOAN_DAYS ? ' long' : '') + '">' + (days !== null ? days + ' วัน' : '') + '</td>'
+          + '<td class="note">' + esc(i.note) + '</td>'
+          + '</tr>';
+      }).join('') || '<tr><td colspan="8" class="empty">ไม่พบรายการ</td></tr>';
+      $('countLine').textContent = 'แสดง ' + rows.length + ' จาก ' + allItems.length + ' รายการ';
+    }
+
+    function renderAll() {
+      renderKpis(); renderLegend(); renderByType(); renderByDept(); renderTable();
+      const sel = $('fType');
+      const cur = filter.type;
+      sel.innerHTML = '<option value="">ทุกประเภท</option>' + SHEETS.map((s) => '<option>' + esc(s.label) + '</option>').join('');
+      sel.value = cur;
+      $('fStatus').value = filter.status;
+    }
+
+    // ---------- load ----------
+    async function load() {
+      const btn = $('refreshBtn');
+      btn.disabled = true;
+      const results = await Promise.allSettled(SHEETS.map((s) => fetchSheet(s.sheet).then((t) => tableToItems(t, s.label))));
+      const items = [];
+      const errors = [];
+      results.forEach((r, k) => (r.status === 'fulfilled' ? items.push(...r.value) : errors.push(SHEETS[k].sheet + ' – ' + r.reason.message)));
+      if (items.length || !allItems.length) allItems = items;
+      const errBox = $('error');
+      if (errors.length) {
+        errBox.style.display = 'block';
+        errBox.innerHTML = '<strong>โหลดข้อมูลบางแท็บไม่สำเร็จ</strong><br>' + errors.map(esc).join('<br>')
+          + (errors.length === SHEETS.length
+            ? '<br><br>ตรวจสอบว่า Google Sheet ตั้งค่าแชร์เป็น <code>ทุกคนที่มีลิงก์ – ผู้มีสิทธิ์อ่าน</code> และชื่อแท็บตรงกับที่ตั้งไว้ในโค้ด'
+            : '');
+      } else errBox.style.display = 'none';
+      renderAll();
+      $('updated').textContent = 'อัปเดตล่าสุด ' + new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+      btn.disabled = false;
+    }
+
+    // ---------- events ----------
+    $('refreshBtn').addEventListener('click', load);
+    $('kpis').addEventListener('click', (e) => {
+      const k = e.target.closest('.kpi'); if (!k) return;
+      filter.status = filter.status === k.dataset.status ? '' : k.dataset.status;
+      renderKpis(); renderTable(); $('fStatus').value = filter.status;
+    });
+    $('byType').addEventListener('click', (e) => {
+      const r = e.target.closest('.type-row'); if (!r) return;
+      filter.type = filter.type === r.dataset.type ? '' : r.dataset.type;
+      $('fType').value = filter.type; renderByType(); renderTable();
+    });
+    $('fType').addEventListener('change', (e) => { filter.type = e.target.value; renderByType(); renderTable(); });
+    $('fStatus').addEventListener('change', (e) => { filter.status = e.target.value; renderKpis(); renderTable(); });
+    $('fSearch').addEventListener('input', (e) => { filter.q = e.target.value.trim(); renderTable(); });
+
+    const tip = $('tooltip');
+    document.addEventListener('mousemove', (e) => {
+      const t = e.target.closest('[data-tip]');
+      if (!t) { tip.style.display = 'none'; return; }
+      tip.textContent = t.dataset.tip;
+      tip.style.display = 'block';
+      const x = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8);
+      tip.style.left = x + 'px';
+      tip.style.top = (e.clientY + 14) + 'px';
+    });
+
+    load();
+    setInterval(load, REFRESH_MS);
+  </script>
+</body>
+</html>

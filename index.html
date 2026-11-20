@@ -97,6 +97,10 @@
     .bar div:first-child { border-top-left-radius: 3px; border-bottom-left-radius: 3px; }
     .bar div:last-child { border-top-right-radius: 3px; border-bottom-right-radius: 3px; }
     .meta { font-size: .75rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+    .stamp {
+      font-size: .72rem; color: var(--ink-3); font-variant-numeric: tabular-nums;
+      border-top: 1px solid var(--border); padding-top: 8px; margin-top: auto;
+    }
 
     .tooltip {
       position: fixed; pointer-events: none; z-index: 10;
@@ -144,6 +148,7 @@
     /* ================== ตั้งค่า ================== */
     const SHEET_ID = '1-qVQwnTXYy0pRpAxG85BRLzB4HfoBQBfGfmTV04M4hs';
     const SHEET_NAME = 'Summary';
+    const STAMP_SHEET = 'อัปเดตล่าสุด'; // แท็บที่ Apps Script บันทึกเวลาแก้ไขล่าสุดของแต่ละเครื่อง
     const REFRESH_MS = 5 * 60 * 1000;
     /* ============================================ */
 
@@ -198,7 +203,44 @@
       return devices;
     }
 
-    function render(devices) {
+    // แปลงค่าวันที่จาก gviz ("Date(2026,10,20,14,32,5)") หรือข้อความ "20/11/2026 14:32"
+    function parseDateTime(c) {
+      if (!c || c.v === null || c.v === undefined || c.v === '') return null;
+      let m = /^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+)(?:,(\d+))?)?/.exec(String(c.v));
+      if (m) return new Date(+m[1], +m[2], +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+      m = /(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\D+(\d{1,2}):(\d{2}))?/.exec(text(c));
+      if (m) {
+        let y = +m[3]; if (y > 2400) y -= 543;
+        return new Date(y, +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0));
+      }
+      return null;
+    }
+
+    // แท็บ "อัปเดตล่าสุด": คอลัมน์ A = ชื่อเครื่อง (ตรงกับหัวคอลัมน์ใน Summary), คอลัมน์ B = วันเวลา
+    function parseStamps(table) {
+      // ถ้าไม่มีแท็บนี้ gviz อาจส่งแท็บแรกกลับมาแทน จึงตรวจหัวคอลัมน์ก่อน
+      if (!table || !table.cols || !table.cols[1] || !String(table.cols[1].label || '').includes('อัปเดต')) return null;
+      const map = new Map();
+      for (const r of (table && table.rows) || []) {
+        if (!r || !r.c) continue;
+        const name = text(r.c[0]);
+        const d = parseDateTime(r.c[1]);
+        if (name && d) map.set(name.replace(/\s+/g, ''), d);
+      }
+      return map;
+    }
+
+    function fmtStamp(d) {
+      const time = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+      const day = new Date(d); day.setHours(0, 0, 0, 0);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const diff = Math.round((today - day) / 86400000);
+      if (diff === 0) return 'วันนี้ ' + time;
+      if (diff === 1) return 'เมื่อวาน ' + time;
+      return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) + ' ' + time;
+    }
+
+    function render(devices, stamps) {
       const ready = devices.reduce((s, d) => s + d.ready, 0);
       const loan = devices.reduce((s, d) => s + d.loan, 0);
       const typesAvail = devices.filter((d) => d.ready > 0).length;
@@ -219,6 +261,7 @@
           + '<div class="avail"><span class="n">' + d.ready + '</span><span class="t">เครื่องว่าง</span></div>'
           + '<div class="bar">' + segs + '</div>'
           + '<div class="meta">ถูกยืม ' + d.loan + ' จาก ' + d.total + ' เครื่อง</div>'
+          + (stamps ? '<div class="stamp">อัปเดตล่าสุด ' + (stamps.get(d.name.replace(/\s+/g, '')) ? fmtStamp(stamps.get(d.name.replace(/\s+/g, ''))) : '–') + '</div>' : '')
           + '</article>';
       }).join('') || '<div class="empty">ไม่มีข้อมูล</div>';
     }
@@ -228,7 +271,11 @@
       const errBox = $('error');
       btn.disabled = true;
       try {
-        render(parseSummary(await fetchSheet(SHEET_NAME)));
+        const [summary, stampTable] = await Promise.all([
+          fetchSheet(SHEET_NAME),
+          fetchSheet(STAMP_SHEET).catch(() => null), // ถ้ายังไม่มีแท็บนี้ ก็แสดงผลต่อได้ตามปกติ
+        ]);
+        render(parseSummary(summary), parseStamps(stampTable));
         errBox.style.display = 'none';
         $('updated').textContent = 'อัปเดต ' + new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
       } catch (e) {
